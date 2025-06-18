@@ -9,16 +9,21 @@ export interface IProduct {
 }
 
 export interface ICart {
-    items: string[],
+    items: IProduct[],
     totalCost: number,
     count: number
+}
+
+export enum PaymentMethodEnum {
+    Online = 'online',
+    offline = 'offline'
 }
 
 export interface IOrder {
     address: string,
     email: string,
     phone: string,
-    paymentMethod: 'online' | 'offline',
+    paymentMethod: PaymentMethodEnum,
     items: string[],
     totalCost: number,
     status: string
