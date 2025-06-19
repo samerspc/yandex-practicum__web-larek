@@ -1,59 +1,44 @@
-import Component from "./base/Component";
-import Card from "./Card";
-import { IEvents, IProduct } from "../types";
+import Component from './base/Component';
+import Card from './Card';
+import { IEvents, IProduct } from '../types';
 
 class Gallery extends Component {
-    protected _items: HTMLElement[];
-    protected _events: IEvents;
+	protected _items: HTMLElement[];
+	protected _events: IEvents;
 
-    constructor(container: HTMLElement, events: IEvents) {
-        super(container);
-        this._items = [];
-        this._events = events;
-        this._events.on('products:changed', this.render.bind(this));
-    }
+	constructor(container: HTMLElement, events: IEvents) {
+		super(container);
+		this._items = [];
+		this._events = events;
+	}
 
-    render(products: IProduct[]) {
-        products.map((product) => {
-            const card = new Card(this.createCardTemplate());
-            const element = card.render(product);
-            
-            element.addEventListener('click', () => {
-                this._events.emit('product:selected', product);
-            });
+	render(products: IProduct[]) {
+		products.forEach((product) => {
+			const card = new Card(this.createCardTemplate());
+			const element = card.render(product);
 
-            this._items.push(element);
+			element.addEventListener('click', () => {
+				this._events.emit('product:selected', product);
+			});
 
-            const button = element.querySelector('.button');
-            button.addEventListener('click', (event) => {
-                event.stopPropagation();
-                this._events.emit('product:added', product);
-            });
+			this._items.push(element);
+		});
 
-            return element;
-        });
+		this.container.replaceChildren(...this._items);
+		return this.container;
+	}
 
-        this.container.replaceChildren(...this._items);
-        return this.container;
-    }
-
-    private createCardTemplate(): HTMLElement {
-        const template = document.createElement('div');
-        template.className = 'card card_full';
-        template.innerHTML = `
-            <img class="card__image" src="" alt="" />
-			<div class="card__column">
-				<span class="card__category card__category_other"></span>
-				<h2 class="card__title"></h2>
-				<p class="card__text"></p>
-                <div class="card__row">
-					<button class="button">Купить</button>
-					<span class="card__price"></span>
-				</div>
-			</div>
+	private createCardTemplate(): HTMLButtonElement {
+		const template = document.createElement('button');
+		template.className = 'card gallery__item';
+		template.innerHTML = `
+            <span class="card__category card__category_soft"></span>
+			<h2 class="card__title"></h2>
+			<img class="card__image" src="<%=require('../images/Subtract.svg')%>" alt="" />
+			<span class="card__price"></span>
         `;
-        return template;
-    }
+		return template;
+	}
 }
 
 export default Gallery;

@@ -1,134 +1,163 @@
-import { IEvents, IProduct, ICart, IOrder, PaymentMethodEnum } from "../types";
-import { Api } from "../components/base/api";
+import { IEvents, IProduct, ICart, IOrder, PaymentMethodEnum } from '../types';
+import { Api } from '../components/base/api';
+
+interface IResponseProducts {
+	total: number;
+	items: IProduct[];
+}
 
 class AppData {
-    protected api: Api;
-    protected events: IEvents;
-    products: IProduct[];
-    cart: ICart;
-    order: IOrder;
+	protected api: Api;
+	protected events: IEvents;
+	products: IProduct[];
+	cart: ICart;
+	order: IOrder;
 
-    constructor(api: Api, events: IEvents) {
-        this.api = api;
-        this.events = events;
-        this.products = [];
-        this.cart = {
-            items: [],
-            totalCost: 0,
-            count: 0
-        };
-        this.order = { 
-            address: '',
-            email: '',
-            phone: '',
-            paymentMethod: PaymentMethodEnum.Online,
-            items: [],
-            totalCost: 0,
-            status: '',
-        };
-    }
+	constructor(api: Api, events: IEvents) {
+		this.api = api;
+		this.events = events;
+		this.products = [];
+		this.cart = {
+			items: [],
+			totalCost: 0,
+			count: 0,
+		};
+		this.order = {
+			address: '',
+			email: '',
+			phone: '',
+			paymentMethod: PaymentMethodEnum.Online,
+			items: [],
+			totalCost: 0,
+			status: '',
+		};
+	}
 
-    async getProducts(): Promise<IProduct[]> {
-        try {
-            const products = await this.api.get('/products') as IProduct[];
-            this.products = products;
-            this.events.emit('products:changed', { products });
-            return products;
-        } catch (e) {
-            console.error(e);
-            return Promise.reject(e);
-        }
-    }
+	async getProducts(): Promise<IProduct[]> {
+		try {
+			const response = (await this.api.get('/product')) as IResponseProducts;
+			const products = response.items as IProduct[];
+			this.products = products;
 
-    toggleProductInCart(product: IProduct): void {
-        if (product.price == null) return;
+			this.events.emit('products:changed', { products });
+			return products;
+		} catch (e) {
+			console.error(e);
+			return Promise.reject(e);
+		}
+	}
 
-        const productIdx = this.products.find((item) => item.id === product.id);
+	toggleProductInCart(product: IProduct): void {
+		if (product.price == null) return;
 
-        if (productIdx.isInCart) {
-            productIdx.isInCart = false;
-            this.cart.items = this.cart.items.filter((item) => item.id !== product.id);
-        } else {
-            productIdx.isInCart = true;
-            this.cart.items.push(productIdx);
-        }
-        this.computeCartItems();
-        this.events.emit('cart:changed', this.cart);
-        this.events.emit('product:changed', productIdx);
-    }
+		const productIdx = this.products.find((item) => item.id === product.id);
 
-    getCartTotal(): number {
-        const cartTotalCost = this.cart.items.reduce((sum, item) => item.price == null ? sum : sum + item.price, 0);
-        return cartTotalCost;
-    }
+		if (productIdx.isInCart) {
+			productIdx.isInCart = false;
+			this.cart.items = this.cart.items.filter(
+				(item) => item.id !== product.id
+			);
+		} else {
+			productIdx.isInCart = true;
+			this.cart.items.push(productIdx);
+		}
+		this.computeCartItems();
+		this.events.emit('cart:changed', this.cart);
+		this.events.emit('product:changed', productIdx);
+	}
 
-    getCartCount(): number {
-        return this.cart.items.length;
-    }
+	getCartTotal(): number {
+		const cartTotalCost = this.cart.items.reduce(
+			(sum, item) => (item.price == null ? sum : sum + item.price),
+			0
+		);
+		return cartTotalCost;
+	}
 
-    computeCartItems(): void {
-        this.cart.count = this.getCartCount();
-        this.cart.totalCost = this.getCartTotal();
-    }
+	getCartCount(): number {
+		return this.cart.items.length;
+	}
 
-    clearCart(): void {
-        this.cart.items.forEach((item) => {
-            if (item.isInCart) {
-                const productElem = this.products.find((product) => product.id === item.id);
-                productElem.isInCart = false;
-                this.events.emit('product:changed', productElem);
-            }
-        });
+	computeCartItems(): void {
+		this.cart.count = this.getCartCount();
+		this.cart.totalCost = this.getCartTotal();
+	}
 
-        this.cart.items.length = 0;
-        this.computeCartItems();
-        this.events.emit('cart:changed', this.cart);
-    }
+	clearCart(): void {
+		this.cart.items.forEach((item) => {
+			if (item.isInCart) {
+				const productElem = this.products.find(
+					(product) => product.id === item.id
+				);
+				productElem.isInCart = false;
+				this.events.emit('product:changed', productElem);
+			}
+		});
 
-    setOrderField(field: keyof Omit<IOrder, 'items' | 'totalCost' | 'status'>, value: string): void {
-        switch (field) {
-            case 'address': 
-                this.order.address = value;
-                break;
-            case 'email':
-                this.order.email = value;
-                break;
-            case 'phone':
-                this.order.phone = value;
-                break;
-            case 'paymentMethod': 
-                this.order.paymentMethod = value as PaymentMethodEnum;
-                break;
-        }
-    }
+		this.cart.items.length = 0;
+		this.computeCartItems();
+		this.events.emit('cart:changed', this.cart);
+	}
 
-    setOrderItems(): void {
-        this.order.items = this.cart.items;
-        this.order.totalCost = this.cart.totalCost;
-    }
+	setOrderField(
+		field: keyof Omit<IOrder, 'items' | 'totalCost' | 'status'>,
+		value: string
+	): void {
+		switch (field) {
+			case 'address':
+				this.order.address = value;
+				break;
+			case 'email':
+				this.order.email = value;
+				break;
+			case 'phone':
+				this.order.phone = value;
+				break;
+			case 'paymentMethod':
+				this.order.paymentMethod = value as PaymentMethodEnum;
+				break;
+		}
+	}
 
-    validateOrderStepOne(): boolean {
-        if (this.order.address !== '') return true;
-        return false; 
-    }
+	setOrderItems(): void {
+		this.order.items = this.cart.items;
+		this.order.totalCost = this.cart.totalCost;
+	}
 
-    validateOrderStepTwo(): boolean {
-        if (this.order.email !== '' && this.order.phone !== '') return true;
-        return false;
-    }
+	validateOrderStepOne(): boolean {
+		if (this.order.address !== '') return true;
+		return false;
+	}
 
-    clearOrder(): void {
-        this.order = {
-            address: '',
-            email: '',
-            phone: '',
-            paymentMethod: PaymentMethodEnum.Online,
-            items: [],
-            totalCost: 0,
-            status: ''
-        }
-    }
-    
-}   
+	validateOrderStepTwo(): boolean {
+		if (this.order.email !== '' && this.order.phone !== '') return true;
+		return false;
+	}
+
+	clearOrder(): void {
+		this.order = {
+			address: '',
+			email: '',
+			phone: '',
+			paymentMethod: PaymentMethodEnum.Online,
+			items: [],
+			totalCost: 0,
+			status: '',
+		};
+	}
+
+	async submitOrder(): Promise<void> {
+		this.setOrderItems();
+		try {
+			await this.api.post('/order', this.order);
+			this.clearCart();
+			this.clearOrder();
+			this.events.emit('order:success');
+		} catch (e) {
+			console.error(e);
+			this.events.emit('order:error', e);
+		}
+	}
+}
 
 export default AppData;
